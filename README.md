@@ -13,7 +13,7 @@ Economic Capital (EC): The capital cushion needed to survive systemic shocks ($V
 
 # The Math
 The model uses the Asset Value approach:
-$$A_i = \sqrt{\rho} Z + \sqrt{1-\rho} \epsilon_i$$
+# $$A_i = \sqrt{\rho} Z + \sqrt{1-\rho} \epsilon_i$$
 
 $Z$ is the Systemic Factor (Global Economy).
 $\epsilon_i$ is the Idiosyncratic Risk (Specific to the firm).
