@@ -1,0 +1,76 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+class CreditRiskSimulator:
+    def __init__(self, n_loans, pd, lgd, ead, rho):
+        self.n_loans = n_loans
+        self.pd = pd
+        self.lgd = lgd
+        self.ead = ead
+        self.rho = rho
+
+        self.el_theoretical = n_loans * pd * lgd * ead
+        self.losses_naive = None
+        self.losses_corr = None
+
+    def run_simulation(self, n_simulations=10000):
+        # Naive
+        draws_naive = np.random.rand(n_simulations, self.n_loans)
+        defaults_naive = draws_naive < self.pd
+        self.losses_naive = np.sum(defaults_naive, axis=1) * self.lgd * self.ead
+
+        # Vasicek
+        threshold = norm.ppf(self.pd)
+        z_global = np.random.normal(0, 1, (n_simulations, 1))
+        epsilon = np.random.normal(0, 1, (n_simulations, self.n_loans))
+        
+        asset_values = (np.sqrt(self.rho) * z_global) + (np.sqrt(1 - self.rho) * epsilon)
+        defaults_corr = asset_values < threshold
+        self.losses_corr = np.sum(defaults_corr, axis=1) * self.lgd * self.ead
+
+    def _calculate_stats(self, losses):
+        el = np.mean(losses)
+        var_999 = np.percentile(losses, 99.9)
+        ec = var_999 - el
+        return el, var_999, ec
+
+    def display_results(self):
+        print(f"\nTeoretyczne EL Portfela: {self.el_theoretical:,.0f} USD")
+      
+        
+       
+        for losses, name in zip([self.losses_naive, self.losses_corr], ["NAIWNY", "VASICEK"]):
+            el, var, ec = self._calculate_stats(losses)
+            print(f"MODEL {name}:")
+            print(f"  EL:  {el:,.0f} USD")
+            print(f"  VaR 99.9%: {var:,.0f} USD")
+            print(f"  EC: {ec:,.0f} USD")
+        
+
+    def plot_distributions(self):
+        plt.figure(figsize=(12, 6))
+        
+        plt.hist(self.losses_naive, bins=50, alpha=0.5, color='green', label='Niezależny (Naive)', density=True)
+        plt.hist(self.losses_corr, bins=50, alpha=0.5, color='red', label='Skorelowany (Vasicek)', density=True)
+        
+      
+        var_n = np.percentile(self.losses_naive, 99.9)
+        var_c = np.percentile(self.losses_corr, 99.9)
+        
+        plt.axvline(var_n, color='darkgreen', linestyle='--', label=f'VaR Naive: {var_n:,.0f}')
+        plt.axvline(var_c, color='darkred', linestyle='--', label=f'VaR Vasicek: {var_c:,.0f}')
+        
+        plt.title('Porównanie Rozkładu Strat')
+        plt.xlabel('Portfolio loss (USD)')
+        plt.ylabel('Frequency')
+        plt.legend()
+        plt.grid(alpha=0.3)
+        plt.show()
+
+
+if __name__ == "__main__":
+    sim = CreditRiskSimulator(n_loans=1000, pd=0.01, lgd=0.40, ead=1000, rho=0.15)
+    sim.run_simulation(n_simulations=20000)
+    sim.display_results()
+    sim.plot_distributions()
